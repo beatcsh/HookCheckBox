@@ -1,3 +1,5 @@
+from uuid import UUID
+from app.models import WebhookRequest
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
