@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
-from core.database import Base
+from app.core.database import Base
 
-class WebHookEndpoint(Base):
+class WebhookEndpoint(Base):
     __tablename__ = "webhook_endpoints"
 
     id: Mapped[uuid.UUID] = mapped_column(

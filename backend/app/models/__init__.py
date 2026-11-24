@@ -1,2 +1,2 @@
-from models.webhook_endpoint import WebHookEndpoint
-from models.webhook_request import WebhookRequest
+from app.models.webhook_endpoint import WebhookEndpoint
+from app.models.webhook_request import WebhookRequest
