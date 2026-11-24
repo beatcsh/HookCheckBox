@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 from core.database import Base
 
+from models import WebHookEndpoint, WebhookRequest
+
 import asyncio
 from logging.config import fileConfig
 
