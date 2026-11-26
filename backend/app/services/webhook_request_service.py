@@ -1,9 +1,10 @@
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import WebhookEndpoint, WebhookRequest
 from app.models import WebhookRequest
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import WebhookEndpoint
 
@@ -60,3 +61,52 @@ async def get_endpoint_requests(db: AsyncSession, endpoint_id: UUID, skip: int =
     result = await db.execute(query)
 
     return result.scalars().all()
+
+async def get_endpoint_stats(db: AsyncSession, endpoint_id: UUID):
+    result = await db.execute(
+        select(
+            func.count(WebhookRequest.id),
+            func.max(WebhookRequest.received_at)
+        ).where(
+            WebhookRequest.endpoint_id == endpoint_id
+        )
+    )
+
+    total_requests, last_received_at = result.one()
+
+    now = datetime.now(ZoneInfo("America/Mexico_City"))
+    start_of_day = now.replace(hour = 0, minute = 0, second = 0, microsecond = 0)
+    next_day = start_of_day + timedelta(days = 1)
+
+    today_result = await db.execute(
+        select(func.count(WebhookRequest.id)).where(
+            WebhookRequest.endpoint_id == endpoint_id,
+            WebhookRequest.received_at >= start_of_day,
+            WebhookRequest.received_at < next_day
+        )
+    )
+
+    requests_today = today_result.scalar_one()
+
+    methods_result = await db.execute(
+        select(
+            WebhookRequest.method,
+            func.count(WebhookRequest.id)
+        ).where(
+            WebhookRequest.endpoint_id == endpoint_id
+        ).group_by(
+            WebhookRequest.method
+        )
+    )
+
+    requests_by_method = {
+        method: count
+        for method, count in methods_result.all()
+    }
+
+    return {
+        "total_requests": total_requests,
+        "requests_today": requests_today,
+        "last_received_at": last_received_at,
+        "requests_by_method": requests_by_method
+    }

@@ -7,7 +7,8 @@ from app.schemas.webhook_endpoint import WebhookEndpointCreate, WebhookEndpointR
 from app.services.webhook_endpoint_service import create_endpoint, get_endpoints
 from app.models import WebhookEndpoint
 from app.schemas.webhook_request import WebhookRequestResponse
-from app.services.webhook_request_service import get_endpoint_requests, get_webhook_request
+from app.services.webhook_request_service import get_endpoint_requests, get_webhook_request, get_endpoint_stats
+from app.schemas.webhook_stats import WebhookEndpointStatsResponse
 
 router = APIRouter(
     prefix = "/endpoints", 
@@ -39,3 +40,12 @@ async def get_request_detail(endpoint_id: UUID, request_id: UUID, db: AsyncSessi
         raise HTTPException(status_code = 404, detail = "Webhook request not found")
 
     return request
+
+@router.get("/{endpoint_id}/stats", response_model = WebhookEndpointStatsResponse)
+async def endpoint_stats(endpoint_id: UUID, db: AsyncSession = Depends(get_db)):
+    endpoint = await db.get(WebhookEndpoint, endpoint_id)
+
+    if not endpoint:
+        raise HTTPException(status_code = 404, detail = "Endpoint not found")
+
+    return await get_endpoint_stats(db, endpoint_id)
