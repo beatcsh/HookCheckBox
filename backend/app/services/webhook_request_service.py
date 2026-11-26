@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import WebhookEndpoint, WebhookRequest
 from app.models import WebhookRequest
@@ -22,17 +23,6 @@ async def save_webhook_request(db: AsyncSession, endpoint: WebhookEndpoint, meth
 
     return webhook_request
 
-async def get_endpoint_requests(db: AsyncSession, endpoint_id: UUID, skip: int = 0, limit: int = 50):
-    result = await db.execute(
-        select(WebhookRequest)
-        .where(WebhookRequest.endpoint_id == endpoint_id)
-        .order_by(WebhookRequest.received_at.desc())
-        .offset(skip)
-        .limit(limit)
-    )
-
-    return result.scalars().all()
-
 async def get_webhook_request(db: AsyncSession, endpoint_id: UUID, request_id: UUID):
     result = await db.execute(
         select(WebhookRequest).where(
@@ -42,3 +32,31 @@ async def get_webhook_request(db: AsyncSession, endpoint_id: UUID, request_id: U
     )
 
     return result.scalar_one_or_none()
+
+async def get_endpoint_requests(db: AsyncSession, endpoint_id: UUID, skip: int = 0, limit: int = 0, method: str | None = None, date_from: datetime | None = None, date_to: datetime | None = None, search: str | None = None):
+    query = select(WebhookRequest).where(
+        WebhookRequest.endpoint_id == endpoint_id
+    )
+
+    if method:
+        query = query.where(WebhookRequest.method == method.upper())
+
+    if date_from:
+        query = query.where(WebhookRequest.date_from == date_from.upper())
+
+    if date_to:
+        query = query.where(WebhookRequest.date_to == date_to.upper())
+
+    if search:
+        query = query.where(WebhookRequest.body.ilike(f"%{search}%"))
+
+    query = (
+        query
+        .order_by(WebhookRequest.received_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+
+    result = await db.execute(query)
+
+    return result.scalars().all()
