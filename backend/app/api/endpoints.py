@@ -9,6 +9,8 @@ from app.models import WebhookEndpoint
 from app.schemas.webhook_request import WebhookRequestResponse
 from app.services.webhook_request_service import get_endpoint_requests, get_webhook_request, get_endpoint_stats
 from app.schemas.webhook_stats import WebhookEndpointStatsResponse
+from app.schemas.webhook_replay import WebhookReplayCreate, WebhookReplayResponse
+from app.services.webhook_replay_service import replay_webhook
 
 router = APIRouter(
     prefix = "/endpoints", 
@@ -49,3 +51,20 @@ async def endpoint_stats(endpoint_id: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code = 404, detail = "Endpoint not found")
 
     return await get_endpoint_stats(db, endpoint_id)
+
+@router.post("/{endpoint_id}/requests/{request_id}/replay", response_model = WebhookReplayResponse)
+async def replay_endpoint_request(endpoint_id: UUID, request_id: UUID, replay_data: WebhookReplayCreate, db: AsyncSession = Depends(get_db)):
+    try:
+        result = await replay_webhook(
+            db = db,
+            endpoint_id = endpoint_id,
+            request_id = request_id,
+            target_url = str(replay_data.target_url)
+        )
+    except ValueError as error:
+        raise HTTPException(status_code = 400, detail = str(error))
+
+    if not result:
+        raise HTTPException(status_code = 404, detail = "Webhook request not found")
+
+    return result
